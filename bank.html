@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🏙️ Labubu Town Bank & Permits</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #e0f7fa; color: #222; }
+    h1, h2 { text-align: center; }
+    .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    input, select, button { margin: 5px; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+    button { background-color: #00796b; color: white; cursor: pointer; font-weight: 600; }
+    button:hover { background-color: #004d40; }
+    ul, ol { list-style: none; padding-left: 0; }
+  </style>
+</head>
+<body>
+
+<a href="index.html" style="font-size: 20px;">Back to Main Screen</a>
+<h1>🏙️ Labubu Town Bank</h1>
+<p style="text-align:center;">Day <span id="dayCount">1</span></p>
+<div style="text-align:center; margin-bottom: 20px;">
+  <button onclick="nextDay()">⏭️ Next Day</button>
+</div>
+
+<div class="section">
+  <h2>📊 Player Balances & Status</h2>
+  <ul id="balances"></ul>
+</div>
+
+<div class="section">
+  <h2>🔄 Change Player Team</h2>
+  <select id="teamChangePlayerSelect"></select> moves to
+  <input id="newTeamName" placeholder="New Team Name" />
+  <button onclick="changeTeam()">Change Team</button>
+</div>
+
+<div class="section">
+  <h2>🏪 Change Store Name</h2>
+  <select id="storeChangePlayerSelect"></select> becomes
+  <input id="newStoreName" placeholder="New Store Name" />
+  <button onclick="changeStore()">Change Store</button>
+</div>
+
+<div class="section">
+  <h2>✍️ Write a Check</h2>
+  <select id="payerSelect"></select> gives
+  <input type="number" id="checkAmount" placeholder="Amount" />
+  to
+  <select id="payeeSelect"></select>
+  <button onclick="writeCheck()">Write Check</button>
+  <div id="pendingChecks"></div>
+</div>
+
+<div class="section">
+  <h2>💳 Cash Checks</h2>
+  <button onclick="cashAllChecks()">Cash All</button>
+</div>
+
+<div class="section">
+  <h2>🏦 Pay the Bank</h2>
+  <select id="payBankPlayerSelect"></select>
+  <input type="number" id="payBankAmount" placeholder="Amount" min="1" />
+  <button onclick="payBank()">Pay Bank</button>
+</div>
+
+<div class="section">
+  <h2>💸 Daily Tax</h2>
+  <button onclick="collectTaxes()">Collect Flat $10 Tax</button>
+</div>
+
+<div class="section">
+  <h2>🏦 Bank Loans (5% Interest)</h2>
+  <select id="loanPlayerSelect"></select> wants
+  <input type="number" id="loanAmount" placeholder="Amount" />
+  <button onclick="giveLoan()">Give Loan</button>
+  <br><br>
+  <select id="repayPlayerSelect"></select> repays
+  <input type="number" id="repayAmount" placeholder="Amount" />
+  <button onclick="repayLoan()">Repay Loan</button>
+  <h3>📜 Outstanding Loans</h3>
+  <ul id="loanList"></ul>
+</div>
+
+<div class="section">
+  <h2>🔫 Gun Permits</h2>
+  <select id="gunPermitPlayerSelect"></select>
+  <button onclick="applyGunPermit()">Apply for Gun Permit ($50 fee)</button>
+  <button onclick="revokeGunPermit()">Revoke Gun Permit</button>
+  <p><b>Fee collected goes to BANK.</b></p>
+</div>
+
+<div class="section">
+  <h2>🚗 Driver's License</h2>
+  <select id="licensePlayerSelect"></select>
+  <input type="file" id="licensePhotoInput" accept="image/*" onchange="previewLicensePhoto()" />
+  <img id="licensePreview" alt="Driver's License Photo Preview" style="max-width:150px; max-height:150px; border-radius:10px; border:1px solid #ccc; margin-top:10px;" />
+  <button onclick="issueDriversLicense()">Issue Driver's License ($30 fee)</button>
+  <button onclick="revokeDriversLicense()">Revoke Driver's License</button>
+  <p><b>Fee collected goes to BANK.</b></p>
+</div>
+
+<script>
+let currentDay = parseInt(localStorage.getItem('labubuDay')) || 1;
+let checks = JSON.parse(localStorage.getItem('labubuChecks')) || [];
+let loans = JSON.parse(localStorage.getItem('labubuLoans')) || {};
+let players = JSON.parse(localStorage.getItem('labubuPlayers')) || [];
+
+players = players.map(p => ({
+  name: p.name || 'Unknown',
+  store: p.store || '',
+  balance: (typeof p.balance === 'number' || p.balance === Infinity) ? p.balance : 0,
+  incomeToday: p.incomeToday || 0,
+  group: p.group || 'Independent',
+  gunPermit: !!p.gunPermit,
+  driversLicense: p.driversLicense || null,
+  password: p.password || ''
+}));
+
+const bankIndex = players.findIndex(p => p.name === 'BANK');
+if (bankIndex === -1) {
+  players.push({
+    name: "BANK",
+    store: "Central Bank",
+    balance: Infinity,
+    incomeToday: 0,
+    group: "Town Hall",
+    gunPermit: false,
+    driversLicense: null,
+    password: ""
+  });
+} else {
+  players[bankIndex].balance = Infinity;
+  players[bankIndex].group = "Town Hall";
+  players[bankIndex].store = "Central Bank";
+}
+
+function saveToLocal() {
+  localStorage.setItem("labubuPlayers", JSON.stringify(players));
+  localStorage.setItem("labubuLoans", JSON.stringify(loans));
+  localStorage.setItem("labubuChecks", JSON.stringify(checks));
+  localStorage.setItem("labubuDay", currentDay.toString());
+}
+
+function nextDay() {
+  currentDay++;
+  players.forEach(p => p.incomeToday = 0);
+  document.getElementById('dayCount').textContent = currentDay;
+  alert(`📆 Welcome to Day ${currentDay}!`);
+  saveToLocal();
+  updateAll();
+}
+
+function writeCheck() {
+  const from = document.getElementById('payerSelect').value;
+  const to = document.getElementById('payeeSelect').value;
+  const amount = parseFloat(document.getElementById('checkAmount').value);
+
+  if (from === to) return alert("Can't write a check to yourself.");
+  if (isNaN(amount) || amount <= 0) return alert("Enter a valid amount.");
+
+  const payer = players.find(p => p.name === from);
+  if (!payer || (payer.balance < amount && payer.balance !== Infinity)) {
+    return alert("Insufficient funds.");
+  }
+
+  checks.push({ from, to, amount });
+  document.getElementById('checkAmount').value = '';
+  saveToLocal();
+  showChecks();
+}
+
+function cashAllChecks() {
+  checks.forEach(c => {
+    const payer = players.find(p => p.name === c.from);
+    const payee = players.find(p => p.name === c.to);
+
+    if (payer && payee && (payer.balance >= c.amount || payer.balance === Infinity)) {
+      if (payer.balance !== Infinity) payer.balance -= c.amount;
+      payee.balance += c.amount;
+    }
+  });
+  checks = [];
+  saveToLocal();
+  updateAll();
+  showChecks();
+}
+
+function changeTeam() {
+  const playerName = document.getElementById("teamChangePlayerSelect").value;
+  const newTeam = document.getElementById("newTeamName").value;
+  const player = players.find(p => p.name === playerName);
+  if (player) {
+    player.group = newTeam || "Independent";
+    saveToLocal();
+    updateBalances();
+  }
+}
+
+function changeStore() {
+  const playerName = document.getElementById("storeChangePlayerSelect").value;
+  const newStore = document.getElementById("newStoreName").value;
+  const player = players.find(p => p.name === playerName);
+  if (player) {
+    player.store = newStore || "";
+    saveToLocal();
+    updateBalances();
+  }
+}
+
+function applyGunPermit() {
+  const playerName = document.getElementById("gunPermitPlayerSelect").value;
+  const player = players.find(p => p.name === playerName);
+  const bank = players.find(p => p.name === "BANK");
+  if (player && bank && player.balance >= 50) {
+    player.balance -= 50;
+    player.gunPermit = true;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function revokeGunPermit() {
+  const playerName = document.getElementById("gunPermitPlayerSelect").value;
+  const player = players.find(p => p.name === playerName);
+  if (player) {
+    player.gunPermit = false;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function issueDriversLicense() {
+  const playerName = document.getElementById("licensePlayerSelect").value;
+  const player = players.find(p => p.name === playerName);
+  const bank = players.find(p => p.name === "BANK");
+  if (player && bank && player.balance >= 30) {
+    player.balance -= 30;
+    player.driversLicense = true;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function revokeDriversLicense() {
+  const playerName = document.getElementById("licensePlayerSelect").value;
+  const player = players.find(p => p.name === playerName);
+  if (player) {
+    player.driversLicense = false;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function payBank() {
+  const name = document.getElementById("payBankPlayerSelect").value;
+  const amount = parseFloat(document.getElementById("payBankAmount").value);
+  const player = players.find(p => p.name === name);
+  if (player && amount > 0 && player.balance >= amount) {
+    player.balance -= amount;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function giveLoan() {
+  const name = document.getElementById("loanPlayerSelect").value;
+  const amount = parseFloat(document.getElementById("loanAmount").value);
+  const player = players.find(p => p.name === name);
+  if (player && amount > 0) {
+    loans[name] = (loans[name] || 0) + (amount * 1.05); // 5% interest
+    player.balance += amount;
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function repayLoan() {
+  const name = document.getElementById("repayPlayerSelect").value;
+  const amount = parseFloat(document.getElementById("repayAmount").value);
+  const player = players.find(p => p.name === name);
+  if (player && loans[name] && amount > 0 && player.balance >= amount) {
+    player.balance -= amount;
+    loans[name] -= amount;
+    if (loans[name] <= 0) delete loans[name];
+    saveToLocal();
+    updateAll();
+  }
+}
+
+function showChecks() {
+  const div = document.getElementById('pendingChecks');
+  div.innerHTML = "<h4>🧾 Pending Checks:</h4>";
+  checks.forEach(c => {
+    div.innerHTML += `<p>${c.from} ➡️ ${c.to}: $${c.amount.toFixed(2)}</p>`;
+  });
+}
+
+function updateAll() {
+  updateBalances();
+  updateSelects();
+  updateLoans();
+  showChecks();
+}
+
+function updateBalances() {
+  const ul = document.getElementById('balances');
+  ul.innerHTML = '';
+  players.forEach(p => {
+    const money = p.balance === Infinity ? '∞' : `$${p.balance.toFixed(2)}`;
+    const team = p.group || "Independent";
+    const licenses = [];
+    if (p.gunPermit) licenses.push("Gun Permit");
+    if (p.driversLicense) licenses.push("Driver's License");
+    const licenseSummary = licenses.length ? licenses.join(", ") : "None";
+
+    ul.innerHTML += `
+      <li>
+        <b>${p.name}</b><br>
+        💰 Money: ${money}<br>
+        🏪 Store: ${p.store || "None"}<br>
+        🧑‍🤝‍🧑 Team: ${team}<br>
+        📜 Licenses: ${licenseSummary}
+      </li><br>
+    `;
+  });
+}
+
+function updateSelects() {
+  const ids = [
+    'payerSelect', 'payeeSelect', 'loanPlayerSelect', 'repayPlayerSelect',
+    'teamChangePlayerSelect', 'storeChangePlayerSelect',
+    'gunPermitPlayerSelect', 'licensePlayerSelect', 'payBankPlayerSelect'
+  ];
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    players.forEach(p => {
+      if (p.name === "BANK" && id !== 'payerSelect') return;
+      sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
+    });
+  });
+}
+
+function updateLoans() {
+  const loanList = document.getElementById('loanList');
+  loanList.innerHTML = '';
+  for (const [name, amount] of Object.entries(loans)) {
+    loanList.innerHTML += `<li>${name}: $${amount.toFixed(2)}</li>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dayCount').textContent = currentDay;
+  updateAll();
+});
+</script>
+
+
+</body>
+</html>

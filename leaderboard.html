@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🏆 Labubu Town Leaderboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #e0f7fa;
+      color: #222;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+      color: #00796b;
+    }
+    ol {
+      max-width: 400px;
+      margin: 0 auto;
+      padding-left: 20px;
+      font-size: 18px;
+      color: #444;
+    }
+    li {
+      margin: 8px 0;
+      padding: 8px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    #emptyMessage {
+      text-align: center;
+      margin-top: 50px;
+      color: #666;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+    
+  <a href="index.html" style="color:black; font-size: 20px;">Back to Main Screen</a>
+  <h1>🏆 Labubu Town Leaderboard</h1>
+  <ol id="leaderboard"></ol>
+  <div id="emptyMessage" style="display:none;">No players yet. Create players to see the leaderboard.</div>
+
+  <script>
+    async function fetchLeaderboard() {
+      try {
+        const response = await fetch('leaderboardData.php');
+        if (!response.ok) throw new Error('Failed to load leaderboard data.');
+        const players = await response.json();
+
+        const board = document.getElementById('leaderboard');
+        const emptyMsg = document.getElementById('emptyMessage');
+        board.innerHTML = '';
+
+        if (!players.length) {
+          emptyMsg.style.display = 'block';
+          return;
+        } else {
+          emptyMsg.style.display = 'none';
+        }
+
+        players.forEach(p => {
+          board.innerHTML += `<li>${p.name} - 💰 $${parseFloat(p.balance).toFixed(2)}</li>`;
+        });
+      } catch (err) {
+        console.error(err);
+        document.getElementById('emptyMessage').textContent = 'Error loading leaderboard.';
+        document.getElementById('emptyMessage').style.display = 'block';
+      }
+    }
+
+    fetchLeaderboard();
+
+    // Auto-refresh leaderboard every 10 seconds
+    setInterval(fetchLeaderboard, 10000);
+  </script>
+</body>
+</html>

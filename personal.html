@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Player Login - Labubu Town</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f4f8; color: #222; }
+    .login, .stats { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+    input, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; }
+    button { background-color: #00796b; color: white; font-weight: 600; cursor: pointer; }
+    button:hover { background-color: #004d40; }
+    h2 { text-align: center; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="login" id="loginDiv">
+    <a href="index.html" style="color:black; font-size: 20px;">Back to Main Screen</a>
+    <h2>Player Login</h2>
+    <input type="text" id="playerNameInput" placeholder="Enter your player name" autocomplete="off" />
+    <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="off" />
+    <button onclick="handleLogin()">Login</button>
+    <p id="loginError" style="color:red; text-align:center;"></p>
+  </div>
+
+  <div class="stats hidden" id="statsDiv">
+    <h2>Your Player Stats</h2>
+    <ul id="playerStatsList"></ul>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+<script>
+  async function handleLogin() {
+    const name = document.getElementById('playerNameInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+
+    if (!name || !password) {
+      showError("Please enter both name and password.");
+      return;
+    }
+
+    try {
+      const res = await fetch('playerLogin.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Login failed.');
+
+      // Login success: data contains player info
+      showError('');
+      showPlayerStats(data.player);
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('loginError').textContent = msg;
+  }
+
+  function showPlayerStats(player) {
+    document.getElementById('loginDiv').classList.add('hidden');
+    document.getElementById('statsDiv').classList.remove('hidden');
+
+    const balance = player.balance === null || player.balance === undefined
+      ? 'N/A'
+      : player.balance === Infinity ? '∞' : `$${parseFloat(player.balance).toFixed(2)}`;
+
+    const licenses = [];
+    if (player.gunPermit) licenses.push("Gun Permit");
+    if (player.driversLicense) licenses.push("Driver's License");
+    const licenseSummary = licenses.length ? licenses.join(", ") : "None";
+
+    document.getElementById('playerStatsList').innerHTML = `
+      <li><strong>Name:</strong> ${player.name}</li>
+      <li><strong>Money:</strong> ${balance}</li>
+      <li><strong>Team:</strong> ${player.group || "Independent"}</li>
+      <li><strong>Store:</strong> ${player.store || "None"}</li>
+      <li><strong>Gun Permit:</strong> ${player.gunPermit ? "Yes" : "No"}</li>
+      <li><strong>Driver's License:</strong> ${player.driversLicense ? "Yes" : "No"}</li>
+      <li><strong>Licenses:</strong> ${licenseSummary}</li>
+    `;
+  }
+
+  function logout() {
+    document.getElementById('statsDiv').classList.add('hidden');
+    document.getElementById('loginDiv').classList.remove('hidden');
+    document.getElementById('playerNameInput').value = '';
+    document.getElementById('passwordInput').value = '';
+    showError('');
+  }
+</script>
+
+</body>
+</html>

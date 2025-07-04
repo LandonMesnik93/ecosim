@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎰 Labubu Casino Slots</title>
+  <style>
+    body {
+      background: radial-gradient(circle at center, #111, #000);
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      font-size: 50px;
+      margin-bottom: 10px;
+      color: gold;
+      text-shadow: 2px 2px 10px red;
+    }
+    .machine {
+      display: inline-block;
+      background: linear-gradient(to bottom right, #222, #000);
+      border: 5px solid gold;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 0 20px gold;
+    }
+    .reels {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 30px 0;
+    }
+    .reel {
+      width: 100px;
+      height: 100px;
+      font-size: 60px;
+      background: #fff;
+      color: black;
+      border: 4px inset #999;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .spin-btn {
+      background: linear-gradient(to bottom, red, darkred);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff0000;
+    }
+    #balance {
+      font-size: 24px;
+      color: #0f0;
+      margin-top: 20px;
+    }
+    #result {
+      font-size: 20px;
+      margin-top: 10px;
+      color: yellow;
+    }
+    #startScreen {
+      margin-top: 100px;
+    }
+    #startGameBtn {
+      margin-top: 10px;
+      background: gold;
+      color: black;
+      border: none;
+      font-size: 18px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="startScreen">
+    <a href="index.html" style="color:#fff; font-size: 20px;">← Back</a>
+    <h1>🎰 LABUBU CASINO</h1>
+    <p>Select your name and enter your password:</p>
+    <select id="playerSelect"></select><br><br>
+    <input type="password" id="passInput" placeholder="Password" /><br><br>
+    <button id="startGameBtn" onclick="startGame()">Enter Casino</button>
+  </div>
+
+  <div id="slotGame" style="display:none;">
+    <h1>🎰 Labubu Slots</h1>
+    <div id="playerName"></div>
+    <div class="machine">
+      <div class="reels">
+        <div class="reel" id="r1">❓</div>
+        <div class="reel" id="r2">❓</div>
+        <div class="reel" id="r3">❓</div>
+      </div>
+      <button class="spin-btn" onclick="spin()">🎲 SPIN ($5)</button>
+      <div id="result"></div>
+    </div>
+    <div id="balance">💰 Balance: $0.00</div>
+    <button style="margin-top:20px;" onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    const symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "🍀", "🍉", "🥕"];
+    const bigWins = {
+      "🍒🍒🍒": 75, "🍋🍋🍋": 100, "🔔🔔🔔": 150,
+      "⭐⭐⭐": 300, "💎💎💎": 500, "🍀🍀🍀": 750,
+      "🍉🍉🍉": 200, "🥕🥕🥕": 250
+    };
+    const medWins = [10, 12, 15, 20];
+    const smallWins = [4, 5, 6];
+    let currentPlayer = null;
+
+    async function loadPlayerDropdown() {
+      try {
+        const res = await fetch('getPlayers.php'); // ✅ your PHP file from SQL
+        const players = await res.json();
+        const dropdown = document.getElementById('playerSelect');
+        dropdown.innerHTML = '';
+        players.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.name;
+          opt.textContent = p.name;
+          dropdown.appendChild(opt);
+        });
+      } catch (err) {
+        alert('Failed to load players.');
+        console.error(err);
+      }
+    }
+
+    async function startGame() {
+      const name = document.getElementById('playerSelect').value;
+      const password = document.getElementById('passInput').value;
+
+      const res = await fetch('playersLogin.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || 'Login failed');
+        return;
+      }
+
+      currentPlayer = data.player;
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('slotGame').style.display = 'block';
+      document.getElementById('playerName').textContent = `👤 Welcome, ${currentPlayer.name}`;
+      updateBalance();
+    }
+
+    function updateBalance() {
+      document.getElementById('balance').textContent = `💰 Balance: $${currentPlayer.balance.toFixed(2)}`;
+    }
+
+    async function spin() {
+      const btn = document.querySelector('.spin-btn');
+      if (btn.disabled) return;
+      if (currentPlayer.balance < 5) return alert('Not enough balance.');
+
+      btn.disabled = true;
+      currentPlayer.balance -= 5;
+      updateBalance();
+      document.getElementById("result").textContent = "🎲 Spinning...";
+
+      const r1 = await spinReel("r1");
+      const r2 = await spinReel("r2");
+      const r3 = await spinReel("r3");
+
+      const combo = r1 + r2 + r3;
+      let payout = 0;
+
+      if (bigWins[combo] && Math.random() < 0.02) {
+        payout = bigWins[combo];
+        document.getElementById("result").textContent = `🎉 JACKPOT! You won $${payout}`;
+      } else if (Math.random() < 0.10) {
+        payout = medWins[Math.floor(Math.random() * medWins.length)];
+        document.getElementById("result").textContent = `😎 Medium win: $${payout}`;
+      } else if (Math.random() < 0.60) {
+        payout = smallWins[Math.floor(Math.random() * smallWins.length)];
+        document.getElementById("result").textContent = `🙂 You won $${payout}`;
+      } else {
+        document.getElementById("result").textContent = "🙈 You lost $5";
+      }
+
+      currentPlayer.balance += payout;
+      updateBalance();
+
+      // Save to DB
+      try {
+        const res = await fetch('updateBalance.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentPlayer.name, balance: currentPlayer.balance })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error();
+      } catch {
+        alert("Failed to save new balance.");
+      }
+
+      btn.disabled = false;
+    }
+
+    async function spinReel(id) {
+      const el = document.getElementById(id);
+      return new Promise(resolve => {
+        const interval = setInterval(() => {
+          el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        }, 100);
+        setTimeout(() => {
+          clearInterval(interval);
+          const final = symbols[Math.floor(Math.random() * symbols.length)];
+          el.textContent = final;
+          resolve(final);
+        }, 600);
+      });
+    }
+
+    function logout() {
+      currentPlayer = null;
+      document.getElementById('slotGame').style.display = 'none';
+      document.getElementById('startScreen').style.display = 'block';
+      document.getElementById('result').textContent = '';
+      document.getElementById('playerName').textContent = '';
+      document.getElementById('passInput').value = '';
+    }
+
+    // Init
+    window.onload = loadPlayerDropdown;
+  </script>
+</body>
+</html>

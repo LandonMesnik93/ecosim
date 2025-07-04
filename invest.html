@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>📈 Labubu Investing</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f2f2f2; color: #222; }
+    h1, h2 { text-align: center; }
+    .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 600px; margin-left: auto; margin-right: auto; }
+    input, select, button { margin: 5px; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+    button { background-color: #33691e; color: white; cursor: pointer; font-weight: 600; }
+    button:hover { background-color: #1b5e20; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border-bottom: 1px solid #ccc; text-align: center; }
+    #message { margin-top: 10px; font-weight: 600; color: green; text-align: center; }
+    #loginSection, #investSection { max-width: 400px; margin: 30px auto; }
+    #investSection { display: none; }
+    #error { color: red; text-align: center; margin-top: 10px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <a href="labubu-bank.html" style="font-size: 20px;">← Back to Labubu Town Bank</a>
+  <h1>📈 Labubu Investing</h1>
+
+  <div id="loginSection" class="section">
+    <h2>Login to Your Investing Account</h2>
+    <input type="text" id="playerNameInput" placeholder="Player Name" autocomplete="off" /><br />
+    <input type="password" id="passwordInput" placeholder="Password" autocomplete="off" /><br />
+    <button onclick="login()">Login</button>
+    <div id="error"></div>
+  </div>
+
+  <div id="investSection" class="section">
+    <h2>Your Balance: $<span id="balance">0.00</span></h2>
+    <h3>Available Assets</h3>
+    <table>
+      <thead>
+        <tr><th>Asset</th><th>Price</th><th>Owned</th><th>Buy</th><th>Sell</th></tr>
+      </thead>
+      <tbody id="assetsTableBody"></tbody>
+    </table>
+    <div id="message"></div>
+    <button onclick="logout()" style="margin-top:15px; background:#b71c1c;">Logout</button>
+  </div>
+
+<script>
+  let players = JSON.parse(localStorage.getItem('labubuPlayers')) || [];
+  let assets = JSON.parse(localStorage.getItem('labubuAssets')) || [
+    { name: 'Labubu Tech', price: 100 },
+    { name: 'Labubu Energy', price: 80 },
+    { name: 'Labubu Finance', price: 120 }
+  ];
+
+  let currentPlayer = null;
+
+  const loginSection = document.getElementById('loginSection');
+  const investSection = document.getElementById('investSection');
+  const errorDiv = document.getElementById('error');
+  const balanceElem = document.getElementById('balance');
+  const assetsTableBody = document.getElementById('assetsTableBody');
+  const messageElem = document.getElementById('message');
+
+  function login() {
+    const name = document.getElementById('playerNameInput').value.trim();
+    const pass = document.getElementById('passwordInput').value;
+
+    if (!name || !pass) {
+      showError("Please enter both name and password.");
+      return;
+    }
+
+    const player = players.find(p => p.name === name);
+
+    if (!player) {
+      showError("Player not found.");
+      return;
+    }
+
+    if (player.password !== pass) {
+      showError("Incorrect password.");
+      return;
+    }
+
+    if (player.name === 'BANK') {
+      showError("BANK account cannot be used here.");
+      return;
+    }
+
+    currentPlayer = player;
+
+    // Make sure portfolio object exists
+    if (!currentPlayer.portfolio) currentPlayer.portfolio = {};
+
+    // Hide login, show investing
+    loginSection.style.display = 'none';
+    investSection.style.display = 'block';
+    errorDiv.textContent = '';
+
+    updateUI();
+  }
+
+  function logout() {
+    currentPlayer = null;
+    loginSection.style.display = 'block';
+    investSection.style.display = 'none';
+    errorDiv.textContent = '';
+    messageElem.textContent = '';
+    document.getElementById('playerNameInput').value = '';
+    document.getElementById('passwordInput').value = '';
+  }
+
+  function savePlayers() {
+    localStorage.setItem('labubuPlayers', JSON.stringify(players));
+  }
+
+  function updateUI() {
+    balanceElem.textContent = currentPlayer.balance.toFixed(2);
+    assetsTableBody.innerHTML = '';
+    assets.forEach(asset => {
+      const owned = currentPlayer.portfolio[asset.name] || 0;
+      assetsTableBody.innerHTML += `
+        <tr>
+          <td>${asset.name}</td>
+          <td>$${asset.price.toFixed(2)}</td>
+          <td>${owned}</td>
+          <td><button onclick="buyAsset('${asset.name}')">Buy 1</button></td>
+          <td><button onclick="sellAsset('${asset.name}')">Sell 1</button></td>
+        </tr>
+      `;
+    });
+  }
+
+  function buyAsset(assetName) {
+    const asset = assets.find(a => a.name === assetName);
+    if (!asset) return;
+    if (currentPlayer.balance < asset.price) {
+      showMessage("Not enough money to buy.");
+      return;
+    }
+    currentPlayer.balance -= asset.price;
+    currentPlayer.portfolio[assetName] = (currentPlayer.portfolio[assetName] || 0) + 1;
+    savePlayers();
+    updateUI();
+    showMessage(`Bought 1 share of ${assetName}`);
+  }
+
+  function sellAsset(assetName) {
+    const owned = currentPlayer.portfolio[assetName] || 0;
+    if (owned <= 0) {
+      showMessage("No shares to sell.");
+      return;
+    }
+    const asset = assets.find(a => a.name === assetName);
+    if (!asset) return;
+    currentPlayer.portfolio[assetName] -= 1;
+    if (currentPlayer.portfolio[assetName] === 0) delete currentPlayer.portfolio[assetName];
+    currentPlayer.balance += asset.price;
+    savePlayers();
+    updateUI();
+    showMessage(`Sold 1 share of ${assetName}`);
+  }
+
+  function showMessage(msg) {
+    messageElem.style.color = 'green';
+    messageElem.textContent = msg;
+    setTimeout(() => { messageElem.textContent = ''; }, 3000);
+  }
+
+  function showError(msg) {
+    errorDiv.textContent = msg;
+  }
+</script>
+
+</body>
+</html>

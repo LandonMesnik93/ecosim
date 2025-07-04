@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Labubu Town Hub</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+      padding: 50px;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      margin: 20px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      min-width: 180px;
+    }
+    .bank {
+      background-color: #00796b;
+    }
+    .casino {
+      background-color: #f57c00;
+      color: black;
+    }
+    .playerManager {
+      background-color: #3949ab;
+    }
+    .leader {
+      background-color: gold;
+      color: black;
+    }
+    .check {
+      background-color: red;
+      color: black;
+    }
+    .invest {
+      background-color: aqua;
+      color: black;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 250px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏙️ Labubu Town Hub</h1>
+  <p>Enter passcodes to access the Bank, Casino, or Player Manager:</p>
+
+  <input id="bankPass" type="password" placeholder="Bank Passcode" />
+  <br />
+  <button class="bank" onclick="goTo('bank')">🏦 Enter Bank</button>
+  <br />
+
+  <input id="playerPass" type="password" placeholder="Player Manager Passcode" />
+  <br />
+  <button class="playerManager" onclick="goToPlayerManager()">👤 Manage Players</button>
+  <br />
+  <hr />
+  <h2></h2>
+  <button class="casino" onclick="goToCasino()">🎰 Enter Casino</button>
+  <button class="leader" onclick="leader()">🏆 Check Leaderboards</button>
+  <button class="check" onclick="check()">Check Personal Status</button>
+  <button class="invest" onclick="invest()">Start Investing</button>
+
+  <script>
+    const bankCode = 'bank2011060912';
+    const casinoCode = 'casino2011060912';
+    const playerManagerCode = 'player2011060912';
+
+    function goTo(place) {
+      if (place === 'bank') {
+        const pass = document.getElementById('bankPass').value.trim();
+        if (pass === bankCode) {
+          window.location.href = 'bank.html';
+        } else {
+          alert('🚫 Incorrect Bank passcode.');
+        }
+      }
+    }
+
+    function goToCasino() {
+      // No input field for casino passcode? If you want one, add it; else, just go.
+      // Here, I assume no passcode needed for now:
+      window.location.href = 'casino.html';
+    }
+
+    function leader() {
+      window.location.href = 'leaderboard.html';
+    }
+
+    function check() {
+      window.location.href = 'personal.html';
+    }
+
+    function invest() {
+      window.location.href = 'invest.html';
+    }
+
+    function goToPlayerManager() {
+      const pass = document.getElementById('playerPass').value.trim();
+      if (pass === playerManagerCode) {
+        window.location.href = 'player.html';
+      } else {
+        alert('🚫 Incorrect Player Manager passcode.');
+      }
+    }
+  </script>
+</body>
+</html>
